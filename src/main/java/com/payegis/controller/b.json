@@ -1,0 +1,28 @@
+{
+  "took" : 1,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : 8,
+    "max_score" : 1.9117957,
+    "hits" : [
+      {
+        "_index" : "test",
+        "_type" : "_doc",
+        "_id" : "5",
+        "_score" : 1.9117957,
+        "_source" : {
+          "s_InvokingType" : "1",
+          "s_T01_CreditApplyId" : "AQY5f0e43f1ce52",
+          "name" : "扈林",
+          "id" : "5"
+        }
+      }
+    ]
+  }
+}
