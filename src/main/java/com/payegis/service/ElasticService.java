@@ -63,9 +63,9 @@ public class ElasticService {
                     .fetchSource(includes, excludes);
             // 创建对应的 SearchRequest
             SearchRequest searchRequest = new SearchRequest();
-            //todo 如果excel中可以解析出index，直接传入
+            // 如果excel中可以解析出index，直接传入
             if (StringUtils.isNotBlank(addressInfo.getDate())) {
-                searchRequest.indices(addressInfo.getDate());
+                searchRequest.indices("event_" + addressInfo.getDate());
             }
 
             searchRequest.source(searchSourceBuilder);
@@ -81,7 +81,7 @@ public class ElasticService {
 
 
         MultiSearchResponse items = multiSearchResponseActionFuture.actionGet();
-        log.info("===========================本次从ES中查出的数据量:{}",items.getResponses().length);
+        log.info("===========================本次从ES中查出的数据量:{}", items.getResponses().length);
         int resultIndex = 0;
         // List<ElasticBaseEntity> updateParamList = new ArrayList<>();
         Map<String, List<ElasticBaseEntity>> updateParamMap = new HashMap<>();
@@ -97,7 +97,7 @@ public class ElasticService {
             //遍历每一个es的响应，依次获取响应值的索引/type/id
             for (SearchHit searchHit : hits.getHits()) {
                 //只保留invokingType是1的
-                if(!invokingType.equals(searchHit.getSource().get("s_InvokingType"))){
+                if (!invokingType.equals(searchHit.getSource().get("s_InvokingType"))) {
                     continue;
                 }
                 //这里需要将searchHit中的index/type/id传入到入参中，为下一步的批量更新指定index/type/id做准备
@@ -114,7 +114,7 @@ public class ElasticService {
             updateParamMap.put(esApplyId, hitsEntityList);
             resultIndex++;
         }
-        log.info("es数据解析完成：updateParamMap.size:{}=====,updateParamMap.info{}", updateParamMap.size(),JSON.toJSONString(updateParamMap));
+        log.info("es数据解析完成：updateParamMap.size:{}=====,updateParamMap.info{}", updateParamMap.size(), JSON.toJSONString(updateParamMap));
         List<String> applyListIds = addressInfoList.stream().map(AddressInfo::getEsApplyId).collect(Collectors.toList());
         List<String> elementsNotSelect = applyListIds.stream()
                 .filter(element -> !updateParamMap.containsKey(element))

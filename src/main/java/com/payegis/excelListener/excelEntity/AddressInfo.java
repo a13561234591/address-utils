@@ -2,7 +2,9 @@ package com.payegis.excelListener.excelEntity;
 
 import com.alibaba.excel.annotation.ExcelIgnore;
 import com.alibaba.excel.annotation.ExcelProperty;
+import com.payegis.excelListener.entityConverter.AddressTimeConverter;
 import lombok.Data;
+
 
 /**
  * @author Administrator
@@ -48,7 +50,8 @@ public class AddressInfo {
 
     @ExcelProperty(index = 12, value = "原始数据")
     private String customerAreaValue;
-    @ExcelProperty(index = 13, value = "数据生产日期")
+
+    @ExcelProperty(index = 13, value = "数据生产日期",converter = AddressTimeConverter.class)
     private String date;
 
     /**
