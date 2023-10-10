@@ -58,6 +58,8 @@ public class ElasticService {
 
             searchSourceBuilder.query(QueryBuilders.boolQuery()
                             .must(QueryBuilders.termQuery(queryField, esApplyId)))
+                    //默认返回符合条件的前10条-->修改为查询100条
+                    .size(100)
                     //固定条件
                     //.must(QueryBuilders.termQuery("s_InvokingType", "1"))
                     .fetchSource(includes, excludes);
@@ -70,7 +72,7 @@ public class ElasticService {
 
             searchRequest.source(searchSourceBuilder);
 
-            //请求放入map，查询失败时打印
+            //请求放入map，查询失败时打印o
             searchObjectMap.put(i, searchRequest);
             // 汇总查询请求
             multiSearchRequest.add(searchRequest);

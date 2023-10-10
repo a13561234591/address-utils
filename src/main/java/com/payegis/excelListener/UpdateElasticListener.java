@@ -117,6 +117,7 @@ public class UpdateElasticListener implements ReadListener<AddressInfo> {
         //判断是否是消金2
         if (data.getProductNo().startsWith("PN")) {
             data.setEsApplyId(data.getRequestSerialNo());
+            data.setFinance2(true);
         } else {
             data.setEsApplyId(data.getApplyId());
         }
@@ -145,6 +146,11 @@ public class UpdateElasticListener implements ReadListener<AddressInfo> {
         // 这里也要保存数据，确保最后遗留的数据也存储到数据库
         processData();
         log.info("所有数据解析完成！");
+
+        if(ObjectUtils.isEmpty(excelWriter)){
+            log.error("本次所有数据全部异常,请检查");
+            return ;
+        }
         excelWriter.finish();
         originFile.delete();
     }

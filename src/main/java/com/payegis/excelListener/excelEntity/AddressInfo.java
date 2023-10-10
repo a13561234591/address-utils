@@ -68,6 +68,12 @@ public class AddressInfo {
     private String esApplyId;
 
     /**
+     * 是否是消金2.0
+     */
+    @ExcelIgnore
+    private boolean isFinance2 = false;
+
+    /**
      * 是否在ES查询时特殊处理
      */
     @ExcelIgnore
