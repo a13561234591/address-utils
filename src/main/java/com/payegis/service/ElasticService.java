@@ -5,6 +5,7 @@ import com.payegis.entity.ElasticBaseEntity;
 import com.payegis.entity.ElasticUpdateInfo;
 import com.payegis.excelListener.excelEntity.AddressInfo;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.ActionFuture;
 import org.elasticsearch.action.search.MultiSearchRequest;
@@ -83,11 +84,15 @@ public class ElasticService {
 
 
         MultiSearchResponse items = multiSearchResponseActionFuture.actionGet();
-        log.info("===========================本次从ES中查出的数据量:{}", items.getResponses().length);
+        log.info("本次从ES中查出的数据量:{}", items.getResponses().length);
         int resultIndex = 0;
         // List<ElasticBaseEntity> updateParamList = new ArrayList<>();
         Map<String, List<ElasticBaseEntity>> updateParamMap = new HashMap<>();
         for (MultiSearchResponse.Item item : items.getResponses()) {
+            if(ObjectUtils.isNotEmpty(item.getFailure())){
+                log.error("查询异常:",item.getFailure());
+                continue;
+            }
             SearchHits hits = item.getResponse().getHits();
             if (hits.getTotalHits() == 0) {
                 Object searchCondition = searchObjectMap.get(resultIndex);
@@ -116,13 +121,16 @@ public class ElasticService {
             updateParamMap.put(esApplyId, hitsEntityList);
             resultIndex++;
         }
-        log.info("es数据解析完成：updateParamMap.size:{}=====,updateParamMap.info{}", updateParamMap.size(), JSON.toJSONString(updateParamMap));
+        //log.info("es数据解析完成：updateParamMap.size:{}=====,updateParamMap.info{}", updateParamMap.size(), JSON.toJSONString(updateParamMap));
         List<String> applyListIds = addressInfoList.stream().map(AddressInfo::getEsApplyId).collect(Collectors.toList());
         List<String> elementsNotSelect = applyListIds.stream()
                 .filter(element -> !updateParamMap.containsKey(element))
                 .collect(Collectors.toList());
-        log.info("==================不能更新Es数据的applyId的数量是:{}=========================,内容是:{}",
-                elementsNotSelect.size(), JSON.toJSONString(elementsNotSelect));
+        if(elementsNotSelect.size()>0){
+            log.info("不能更新Es数据的applyId的数量是:{},内容是:{}",
+                    elementsNotSelect.size(), JSON.toJSONString(elementsNotSelect));
+        }
+
         return updateParamMap;
 
     }

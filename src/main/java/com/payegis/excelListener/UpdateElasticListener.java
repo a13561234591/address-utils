@@ -103,8 +103,10 @@ public class UpdateElasticListener implements ReadListener<AddressInfo> {
      */
     private List<AddressInfo> cachedDataList = ListUtils.newArrayListWithExpectedSize(BATCH_COUNT);
 
-    private Map<String, ElasticBaseEntity> cachedDataMap = new HashMap<>();
-
+    /**
+     * 二次es查询重试数据
+     */
+    private List<AddressInfo> retryDataList = ListUtils.newArrayListWithExpectedSize(BATCH_COUNT);
 
     /**
      * 这个每一条数据解析都会来调用
@@ -183,15 +185,55 @@ public class UpdateElasticListener implements ReadListener<AddressInfo> {
             List<AddressInfo> addressInfoList = entry.getValue();
             List<ElasticBaseEntity> elasticBaseEntityList = elasticBaseEntityMap.get(esApplyId);
             if (CollectionUtils.isEmpty(elasticBaseEntityList)) {
-                log.error("根据applyId：{}在ES中未查到数据，所有地址信息列入异常列表", esApplyId);
-                errorNum += addressInfoList.size();
-                inputErrorList.addAll(addressInfoList);
+                log.info("根据applyId：{}在ES中未查到数据,重新解析日期", esApplyId);
+                addressInfoList.forEach(e->{
+                    String date = this.dateAnalysis(e);
+                    e.setDate(date);
+                });
+                retryDataList.addAll(addressInfoList);
                 continue;
             }
             for (ElasticBaseEntity elasticBaseEntity : elasticBaseEntityList) {
                 this.summaryAddress(elasticBaseEntity, addressInfoList);
                 updateESParam.add(elasticBaseEntity);
             }
+        }
+
+
+        if(retryDataList.size() > 0){
+            List<String> dateList = retryDataList.stream().map(AddressInfo::getDate).collect(Collectors.toList());
+            List<String> esApplyIdList = retryDataList.stream().map(AddressInfo::getEsApplyId).collect(Collectors.toList());
+            log.info("=====================================基于表格中的日期查询es数据异常，自定义解析并重试,异常数据量:{},本次重新查询的索引:{},本次重新查询的applyId:{}",retryDataList.size()
+                    ,JSON.toJSONString(dateList),JSON.toJSONString(esApplyIdList));
+            Map<String, List<ElasticBaseEntity>> retryElasticBaseEntityMap = elasticService.select(retryDataList);
+            //获取本次成功查到的索引
+            List<ElasticBaseEntity> combinedList = new ArrayList<>();
+            for (List<ElasticBaseEntity> entities : retryElasticBaseEntityMap.values()) {
+                combinedList.addAll(entities);
+            }
+            List<String> collect = combinedList.stream().map(ElasticBaseEntity::getIndex).collect(Collectors.toList());
+
+            //es唯一索引为key
+            Map<String, List<AddressInfo>> retryAddressInfoMap = retryDataList.stream().collect(Collectors.groupingBy(AddressInfo::getEsApplyId));
+
+            //拼接ES更新参数
+            for (Map.Entry<String, List<AddressInfo>> entry : retryAddressInfoMap.entrySet()) {
+                String esApplyId = entry.getKey();
+                List<AddressInfo> addressInfoList = entry.getValue();
+                List<ElasticBaseEntity> elasticBaseEntityList = retryElasticBaseEntityMap.get(esApplyId);
+                if (CollectionUtils.isEmpty(elasticBaseEntityList)) {
+                    log.error("根据applyId：{}再次在ES中依然未查到数据，所有地址信息列入异常列表", esApplyId);
+                    errorNum += addressInfoList.size();
+                    inputErrorList.addAll(addressInfoList);
+                    continue;
+                }
+                for (ElasticBaseEntity elasticBaseEntity : elasticBaseEntityList) {
+                    this.summaryAddress(elasticBaseEntity, addressInfoList);
+                    updateESParam.add(elasticBaseEntity);
+                }
+            }
+            retryDataList.clear();
+            log.info("===============================本次二次数据复查处理完成");
         }
         if (updateESParam.size() == 0) {
             log.error("本次更新数据为空:");
@@ -236,6 +278,18 @@ public class UpdateElasticListener implements ReadListener<AddressInfo> {
         }
 
         elasticBaseEntity.setUpdateInfoList(updateInfoList);
+    }
+
+    private String dateAnalysis(AddressInfo  addressInfo){
+        String applyId = addressInfo.getApplyId();
+        String date = "";
+        if(addressInfo.isFinance2()){
+            //消金2.0只有年月数据，3.0的则是年月日数据
+            date = applyId.substring(5,11).concat("*");
+        }else {
+            date = applyId.substring(5,13);
+        }
+        return date;
     }
 
 }
