@@ -29,6 +29,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -147,7 +149,8 @@ public class UpdateElasticListener implements ReadListener<AddressInfo> {
     public void doAfterAllAnalysed(AnalysisContext context) {
         // 这里也要保存数据，确保最后遗留的数据也存储到数据库
         processData();
-        log.info("所有数据解析完成！");
+
+        log.info("所有数据解析完成！{}", ToStringBuilder.reflectionToString(context, ToStringStyle.SHORT_PREFIX_STYLE));
 
         if(ObjectUtils.isEmpty(excelWriter)){
             log.error("本次所有数据全部异常,请检查");
